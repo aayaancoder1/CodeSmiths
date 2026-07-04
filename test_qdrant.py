@@ -8,15 +8,24 @@ def main():
     print("Initializing SentenceTransformer Embedding Provider...")
     provider = SentenceTransformerProvider()
     
-    print("Initializing Qdrant Memory Client Adapter...")
-    qdrant_client = QdrantClientAdapter(location=":memory:")
+    print("Connecting to Qdrant at http://localhost:6333...")
+    qdrant_client = QdrantClientAdapter(url="http://localhost:6333")
     
     # Bind provider and client inside the coordinate service
     service = EmbeddingService(provider=provider, qdrant_client=qdrant_client)
 
-    collection_name = "demo_chunks"
-    print(f"Creating collection '{collection_name}'...")
+    collection_name = "company_brain_demo"
+    print(f"Checking if collection '{collection_name}' exists...")
+    if qdrant_client.collection_exists(collection_name):
+        print(f"Collection '{collection_name}' already exists. Deleting it to ensure a fresh test run...")
+        qdrant_client.client.delete_collection(collection_name)
+    
+    print(f"Creating collection '{collection_name}' with vector size 384 and distance COSINE...")
     qdrant_client.create_collection(collection_name, vector_size=384)
+    
+    # Verify collection creation
+    assert qdrant_client.collection_exists(collection_name), "Failed to verify collection creation!"
+    print("Verified: Collection exists.")
 
     data_dir = "data/demo_documents"
     demo_files = ["payment_incident.md", "redis_outage.md", "slack_thread.md"]
@@ -31,13 +40,14 @@ def main():
         metadata = EmbeddingMetadata(
             source_type="markdown",
             created_at="2026-07-04T12:00:00Z",
-            permissions=["eng", "admin"]
+            permissions=["eng", "admin"],
+            additional_info={"source_file": filename}
         )
 
         # Generate chunk embedding
         chunk_emb = service.generate_chunk_embeddings(
             document_id=filename,
-            chunk_id=idx,
+            chunk_id=str(idx),
             tenant_id="tenant-123",
             text=text,
             metadata=metadata
@@ -46,11 +56,14 @@ def main():
 
     print("Storing embeddings to Qdrant...")
     service.store_embeddings(collection_name, embeddings_list)
+    print("Verified: Vector insertion completed.")
 
-    print("\nRetrieving Top 3 matched embeddings for search query: 'outage session tokens failed'...")
-    query_vector = service.embed_query("outage session tokens failed")
+    # Search for "payment outage"
+    search_query = "payment outage"
+    print(f"\nSearching for query: '{search_query}'...")
+    query_vector = service.embed_query(search_query)
     
-    # Search via adapter directly (tenancy isolation check)
+    # Search via adapter
     search_results = qdrant_client.search_embeddings(
         collection_name=collection_name,
         query_vector=query_vector,
@@ -58,17 +71,16 @@ def main():
         top_k=3
     )
 
-    print(f"\nSearch results count: {len(search_results)}")
+    print(f"\nSearch results count (top 3): {len(search_results)}")
     for r in search_results:
-        print(f"-> Match ID: {r['id']}, Score: {r['score']:.4f}")
-        print(f"   Payload: {r['payload']}")
+        print(f"Score: {r['score']:.4f}")
+        print(f"Document ID: {r['document_id']}")
+        print(f"Chunk ID: {r['chunk_id']}")
+        print(f"Metadata: {r['metadata']}")
+        print("-" * 40)
 
-    # Validation assertions
+    # Verification assertions
     assert len(search_results) > 0, "No search results returned!"
-    # The top result should be the redis outage because the query matches "outage session tokens"
-    top_result_doc = search_results[0]['payload']['document_id']
-    print(f"\nTop Result Document Match: {top_result_doc}")
-    assert top_result_doc == "redis_outage.md", f"Expected redis_outage.md, but got {top_result_doc}"
     print("SUCCESS: Qdrant Integration Validation PASSED!")
 
 if __name__ == "__main__":

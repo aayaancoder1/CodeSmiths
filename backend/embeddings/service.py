@@ -34,24 +34,7 @@ class EmbeddingService(IEmbeddingService):
     def store_embeddings(self, collection_name: str, embeddings: List[Any]) -> None:
         if not self.qdrant_client:
             raise ValueError("Qdrant client not initialized")
-        
-        points = []
-        for emb in embeddings:
-            points.append({
-                "id": getattr(emb, "chunk_id", getattr(emb, "document_id")),
-                "vector": emb.embedding,
-                "payload": {
-                    "tenant_id": emb.tenant_id,
-                    "document_id": emb.document_id,
-                    "metadata": {
-                        "source_type": emb.metadata.source_type,
-                        "created_at": emb.metadata.created_at,
-                        "permissions": emb.metadata.permissions,
-                        "additional_info": emb.metadata.additional_info
-                    }
-                }
-            })
-        self.qdrant_client.upsert_vectors(collection_name, points)
+        self.qdrant_client.store_embeddings(collection_name, embeddings)
 
     def update_embeddings(self, collection_name: str, embeddings: List[Any]) -> None:
         self.store_embeddings(collection_name, embeddings)
@@ -59,8 +42,4 @@ class EmbeddingService(IEmbeddingService):
     def delete_embeddings(self, collection_name: str, document_id: Optional[str] = None, chunk_ids: Optional[List[str]] = None) -> None:
         if not self.qdrant_client:
             raise ValueError("Qdrant client not initialized")
-        
-        if chunk_ids:
-            self.qdrant_client.delete_vectors(collection_name, chunk_ids)
-        elif document_id:
-            self.qdrant_client.delete_by_filter(collection_name, {"document_id": document_id})
+        self.qdrant_client.delete_embeddings(collection_name, document_id, chunk_ids)
