@@ -1,31 +1,62 @@
 import React from 'react';
 import Card from './Card';
+import Badge from '../Feedback/Badge';
+import Button from '../Buttons/Button';
 
 const CitationCard = ({
-  sourceName,
-  relevanceScore,
-  excerpt,
-  onClick,
+  documentTitle = 'Untitled Document',
+  source = 'Unknown Source',
+  pageNumber,
+  timestamp,
+  confidence = 100, // percentage (e.g. 98)
+  onOpen,
   className = '',
   ...props
 }) => {
   return (
     <Card 
-      onClick={onClick}
-      className={`border border-ui-border bg-ui-surface/60 hover:bg-ui-surfaceHover hover:border-ui-borderHover ${className}`}
+      className={`border border-ui-border bg-ui-surface/60 hover:bg-ui-surfaceHover hover:border-ui-borderHover transition-all flex flex-col justify-between h-full p-5 rounded-2xl ${className}`}
       {...props}
     >
-      <div className="flex justify-between items-center pb-2 border-b border-ui-border/60">
-        <span className="font-semibold text-xs text-white truncate max-w-[70%]">{sourceName}</span>
-        {relevanceScore && (
-          <span className="text-[10px] uppercase font-bold tracking-wider text-brand-500 bg-brand-500/10 px-2 py-0.5 rounded-full border border-brand-500/20">
-            {relevanceScore}% match
-          </span>
-        )}
+      <div className="space-y-3">
+        {/* Header: Title and Badge */}
+        <div className="flex justify-between items-start gap-4">
+          <h4 className="font-semibold text-sm text-ui-text-primary line-clamp-2 leading-snug">
+            {documentTitle}
+          </h4>
+          <Badge variant={confidence >= 80 ? 'success' : confidence >= 50 ? 'warning' : 'danger'} size="sm">
+            {confidence}% Match
+          </Badge>
+        </div>
+
+        {/* Source metadata info */}
+        <div className="text-xs text-ui-text-tertiary space-y-1">
+          <div className="flex items-center gap-1">
+            <span className="font-medium text-ui-text-secondary">Source:</span>
+            <span className="truncate max-w-[180px]">{source}</span>
+          </div>
+          <div className="flex justify-between items-center text-[11px] pt-1">
+            {pageNumber && (
+              <span>Page {pageNumber}</span>
+            )}
+            {timestamp && (
+              <span>{timestamp}</span>
+            )}
+          </div>
+        </div>
       </div>
-      <p className="text-xs text-ui-text-secondary leading-relaxed mt-3 line-clamp-3">
-        "{excerpt}"
-      </p>
+
+      {/* Open Button */}
+      <div className="mt-4 pt-3 border-t border-ui-divider flex justify-end">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={onOpen}
+          className="text-xs font-semibold px-3 py-1.5 rounded-lg border-ui-border hover:bg-ui-surface"
+        >
+          Open Document
+        </Button>
+      </div>
     </Card>
   );
 };
