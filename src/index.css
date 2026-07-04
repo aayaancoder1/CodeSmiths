@@ -2,6 +2,33 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  /* Toast slide-in animation */
+  .animate-slide-in {
+    animation: slideInRight 0.25s ease-out both;
+  }
+
+  @keyframes slideInRight {
+    from {
+      opacity: 0;
+      transform: translateX(1.5rem);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  /* Hide scrollbar while preserving scroll functionality */
+  .scrollbar-none {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;     /* Firefox */
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;             /* Chrome, Safari, Opera */
+  }
+}
+
 @layer base {
   body {
     @apply bg-ui-bg text-ui-text-primary antialiased selection:bg-brand-500/30 selection:text-white font-sans;

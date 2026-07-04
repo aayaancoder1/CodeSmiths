@@ -5,7 +5,7 @@ import TopNavbar from '../../components/TopNavbar/TopNavbar';
 
 const MainLayout = ({ className = '' }) => {
   return (
-    <div className={`min-h-screen flex bg-slate-950 text-slate-100 ${className}`}>
+    <div className={`min-h-screen flex bg-ui-bg text-ui-text-primary ${className}`}>
       {/* Sidebar Component */}
       <Sidebar />
 
@@ -15,7 +15,7 @@ const MainLayout = ({ className = '' }) => {
         <TopNavbar />
 
         {/* Scrollable Content Area */}
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto p-6" id="main-content">
           <div className="max-w-7xl mx-auto space-y-6">
             <Outlet />
           </div>
