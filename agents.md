@@ -1,1 +1,0 @@
-Use Antigravity to build: embedding agent, retrieval agent, graph agent, synthesis agent.
