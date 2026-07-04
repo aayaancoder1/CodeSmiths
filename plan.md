@@ -1,6 +1,6 @@
-# Frontend Team
+# Agents + DevOps Team
 
-Owner: Thanmayee
+Owner: Nikshitha
 
 Project Weight: 10%
 
@@ -8,27 +8,34 @@ Project Weight: 10%
 
 # Objective
 
-Build the user experience layer.
+Build workflow automation and deployment infrastructure.
 
 ---
 
-# Pages
+# Deliverables
 
-- Login
-- Dashboard
-- Chat
-- Search
-- Knowledge Graph
-- Analytics
-- Admin
+- Planner Agent
+- Tool Executor
+- Verification Agent
+- Audit System
+- Docker
+- Testing
+- Deployment
 
 ---
 
-# Components
+# Workflow
 
-- sidebar
-- chat window
-- citations
-- graph viewer
-- analytics cards
-- document viewer
+User Request
+↓
+Planner
+↓
+Task Graph
+↓
+Tool Execution
+↓
+Verification
+↓
+Confirmation
+↓
+Audit

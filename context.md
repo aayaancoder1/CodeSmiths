@@ -1,34 +1,39 @@
 # Project Context
 
-Frontend consumes APIs from:
+You are building the action layer.
 
-- AI layer
-- Agent layer
-- Backend layer
+Your agents consume:
 
----
-
-# User Flow
-
-Login
-↓
-Dashboard
-↓
-Ask Question
-↓
-Answer
-↓
-Sources
-↓
-Graph
-↓
-Actions
+- retrieval APIs
+- graph APIs
+- backend APIs
 
 ---
 
-# Visualizations
+# Example
 
-- citation cards
-- graph visualization
-- incident timelines
-- analytics
+User:
+
+Create a Jira ticket for the payment outage.
+
+Workflow:
+
+retrieve
+↓
+analyze
+↓
+generate
+↓
+confirm
+↓
+execute
+↓
+audit
+
+---
+
+# Constraints
+
+- every action must be auditable
+- every action must be reversible
+- require confirmation for destructive actions
