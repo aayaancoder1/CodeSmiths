@@ -146,3 +146,9 @@ class GraphContextExpander:
         for rel in context.relationships:
             lines.append(f"  - ({rel['source_id']}) -[{rel['type']}]-> ({rel['target_id']})")
         return "\n".join(lines)
+
+    def expand(self, seed_nodes: List[Dict[str, Any]], tenant_id: str) -> ExpandedGraphContext:
+        """
+        Backward compatible expand wrapper.
+        """
+        return self.expand_graph(seed_nodes, tenant_id)

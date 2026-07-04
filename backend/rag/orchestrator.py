@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import List, Dict, Any
 from .models import RagRequest, RagResponse, AssembledContext, ExpandedGraphContext
 from .graph_expander import GraphContextExpander
 from .context_builder import ContextBuilder
@@ -25,7 +25,7 @@ class RagOrchestrator:
 
     def execute_pipeline(self, request: RagRequest, retrieved_chunks: List[Dict[str, Any]], seed_nodes: List[Dict[str, Any]]) -> RagResponse:
         # Step 1: Expand neighborhood graph context
-        graph_context = self.expander.expand(seed_nodes, request.tenant_id)
+        graph_context = self.expander.expand_graph(retrieved_chunks, request.tenant_id)
         
         # Step 2: Combine texts and graph nodes into unified context blocks
         context = self.builder.build(retrieved_chunks, graph_context)
