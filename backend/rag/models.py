@@ -15,8 +15,17 @@ class ExpandedGraphContext:
     """
     Isolated node and edge definitions parsed from Neo4j traversal.
     """
-    nodes: List[Dict[str, Any]] = field(default_factory=list)
-    edges: List[Dict[str, Any]] = field(default_factory=list)
+    entities: List[Dict[str, Any]] = field(default_factory=list)
+    relationships: List[Dict[str, Any]] = field(default_factory=list)
+    supporting_documents: List[str] = field(default_factory=list)
+
+    @property
+    def nodes(self) -> List[Dict[str, Any]]:
+        return self.entities
+
+    @property
+    def edges(self) -> List[Dict[str, Any]]:
+        return self.relationships
 
 @dataclass
 class AssembledContext:
