@@ -1,5 +1,5 @@
 /**
- * Service placeholder for handling admin and workspace permissions.
+ * Service for handling admin and workspace permissions.
  */
 export const adminService = {
   /**
@@ -7,18 +7,29 @@ export const adminService = {
    * @returns {Promise<any[]>}
    */
   async getContributors() {
-    // Placeholder method - No implementation.
-    return Promise.resolve([]);
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve([
+          { id: 1, name: 'Thanmayee', role: 'Frontend Owner', status: 'Active' },
+          { id: 2, name: 'Aayaan', role: 'AI pipelines / RAG', status: 'Active' },
+          { id: 3, name: 'Kishan', role: 'FastAPI / DB', status: 'Active' },
+          { id: 4, name: 'Nikshitha', role: 'Agent Workflows', status: 'Active' }
+        ]);
+      }, 350);
+    });
   },
 
   /**
    * Update workspace permissions or system settings rules.
-   * @param {string} userId
+   * @param {string|number} userId
    * @param {any} settings
    * @returns {Promise<any>}
    */
   async updateContributorPermissions(userId, settings) {
-    // Placeholder method - No implementation.
-    return Promise.resolve(null);
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve({ success: true, userId, updatedSettings: settings });
+      }, 300);
+    });
   }
 };

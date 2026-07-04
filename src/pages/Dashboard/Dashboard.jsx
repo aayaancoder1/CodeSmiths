@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import MetricCard from '../../components/ui/Cards/MetricCard';
 import Card from '../../components/ui/Cards/Card';
 import Button from '../../components/ui/Buttons/Button';
@@ -6,9 +6,31 @@ import SearchInput from '../../components/ui/Inputs/SearchInput';
 import Badge from '../../components/ui/Feedback/Badge';
 import PageHeader from '../../components/ui/Layout/PageHeader';
 import StatusIndicator from '../../components/ui/Layout/StatusIndicator';
+import { dashboardService } from '../../services/dashboardService';
 
 const Dashboard = () => {
   const [searchValue, setSearchValue] = useState('');
+  const [metrics, setMetrics] = useState(null);
+  const [sources, setSources] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [metricRes, sourcesRes] = await Promise.all([
+          dashboardService.getOverviewMetrics(),
+          dashboardService.getActiveIngestions()
+        ]);
+        setMetrics(metricRes);
+        setSources(sourcesRes);
+      } catch (err) {
+        console.error('Error fetching dashboard data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   const quickActions = [
     { label: 'New Search Query', icon: '🔍', path: '/search' },
@@ -22,13 +44,6 @@ const Dashboard = () => {
     'security tokens for AWS microservices',
     'employee onboarding checklist docs',
     'Vite optimization guidelines'
-  ];
-
-  const connectedSources = [
-    { name: 'Google Drive', icon: '📂', status: 'connected', count: '1,420 docs' },
-    { name: 'Notion Workspace', icon: '📝', status: 'connected', count: '458 pages' },
-    { name: 'Slack Channels', icon: '💬', status: 'connected', count: '12 channels' },
-    { name: 'GitHub Codebase', icon: '💻', status: 'connected', count: '8 repos' }
   ];
 
   const recentActivities = [
@@ -52,10 +67,34 @@ const Dashboard = () => {
 
       {/* Analytics Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard title="Total Indexed Nodes" value="84,290" change="+12.4%" changeType="positive" icon="🕸️" />
-        <MetricCard title="System Queries (24h)" value="1,842" change="+3.8%" changeType="positive" icon="⚡" />
-        <MetricCard title="Ingestion Latency" value="108ms" change="-12ms" changeType="positive" icon="⚙️" />
-        <MetricCard title="Connected Sources" value="4 / 6" change="Online" changeType="neutral" icon="🔌" />
+        <MetricCard 
+          title="Total Indexed Nodes" 
+          value={loading ? '...' : metrics?.indexedNodes || '0'} 
+          change="+12.4%" 
+          changeType="positive" 
+          icon="🕸️" 
+        />
+        <MetricCard 
+          title="System Queries (24h)" 
+          value={loading ? '...' : metrics?.queriesCount || '0'} 
+          change="+3.8%" 
+          changeType="positive" 
+          icon="⚡" 
+        />
+        <MetricCard 
+          title="Ingestion Latency" 
+          value={loading ? '...' : metrics?.latency || '0ms'} 
+          change="-12ms" 
+          changeType="positive" 
+          icon="⚙️" 
+        />
+        <MetricCard 
+          title="Connected Sources" 
+          value={loading ? '...' : metrics?.connectedCount || '0'} 
+          change="Online" 
+          changeType="neutral" 
+          icon="🔌" 
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -103,21 +142,25 @@ const Dashboard = () => {
           <Card className="p-5 border border-ui-border bg-ui-surface/40">
             <h3 className="text-xs font-semibold text-ui-text-secondary uppercase tracking-wider mb-4">Connected Sources</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {connectedSources.map((source, idx) => (
-                <div 
-                  key={idx}
-                  className="flex items-center justify-between p-3.5 rounded-xl border border-ui-border bg-ui-bg"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl select-none">{source.icon}</span>
-                    <div>
-                      <h4 className="text-xs font-bold text-ui-text-primary">{source.name}</h4>
-                      <p className="text-[10px] text-ui-text-tertiary">{source.count}</p>
+              {loading ? (
+                <div className="text-xs text-ui-text-tertiary">Loading connected sources...</div>
+              ) : (
+                sources.map((source, idx) => (
+                  <div 
+                    key={idx}
+                    className="flex items-center justify-between p-3.5 rounded-xl border border-ui-border bg-ui-bg"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl select-none">{source.icon}</span>
+                      <div>
+                        <h4 className="text-xs font-bold text-ui-text-primary">{source.name}</h4>
+                        <p className="text-[10px] text-ui-text-tertiary">{source.count}</p>
+                      </div>
                     </div>
+                    <StatusIndicator status="active" label="Syncing" />
                   </div>
-                  <StatusIndicator status="active" label="Syncing" />
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </Card>
         </div>

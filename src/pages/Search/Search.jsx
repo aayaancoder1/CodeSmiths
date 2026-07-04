@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import SearchInput from '../../components/ui/Inputs/SearchInput';
-import Dropdown from '../../components/ui/Inputs/Dropdown';
-import Checkbox from '../../components/ui/Inputs/Checkbox';
 import CitationCard from '../../components/ui/Cards/CitationCard';
 import Loading from '../../components/ui/Feedback/Loading';
 import EmptyState from '../../components/ui/Feedback/EmptyState';
@@ -9,6 +8,7 @@ import PageHeader from '../../components/ui/Layout/PageHeader';
 import Button from '../../components/ui/Buttons/Button';
 
 const Search = () => {
+  const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -56,7 +56,8 @@ const Search = () => {
           pageNumber: 12,
           timestamp: 'Updated 2 days ago',
           confidence: 94,
-          sourceType: 'drive'
+          sourceType: 'drive',
+          docId: 'security-policy-v4'
         },
         {
           id: 2,
@@ -65,7 +66,8 @@ const Search = () => {
           pageNumber: 3,
           timestamp: 'Updated 1 week ago',
           confidence: 86,
-          sourceType: 'notion'
+          sourceType: 'notion',
+          docId: 'sso-login-guide'
         },
         {
           id: 3,
@@ -74,7 +76,8 @@ const Search = () => {
           pageNumber: 1,
           timestamp: 'Updated 3 mins ago',
           confidence: 72,
-          sourceType: 'github'
+          sourceType: 'github',
+          docId: 'state-management'
         },
         {
           id: 4,
@@ -83,7 +86,8 @@ const Search = () => {
           pageNumber: null,
           timestamp: 'Updated 4 hours ago',
           confidence: 58,
-          sourceType: 'slack'
+          sourceType: 'slack',
+          docId: 'production-deployment'
         }
       ];
 
@@ -102,25 +106,23 @@ const Search = () => {
 
   const handleSuggestedClick = (suggested) => {
     setQuery(suggested);
-    // Directly trigger search
+    setLoading(true);
+    setHasSearched(true);
     setTimeout(() => {
-      setLoading(true);
-      setHasSearched(true);
-      setTimeout(() => {
-        setResults([
-          {
-            id: 1,
-            documentTitle: `${suggested} Configuration & Setup Guidelines`,
-            source: 'Notion Workspace / Internal-Guides',
-            pageNumber: 2,
-            timestamp: 'Updated 1 day ago',
-            confidence: 98,
-            sourceType: 'notion'
-          }
-        ]);
-        setLoading(false);
-      }, 800);
-    }, 100);
+      setResults([
+        {
+          id: 1,
+          documentTitle: `${suggested} Configuration & Setup Guidelines`,
+          source: 'Notion Workspace / Internal-Guides',
+          pageNumber: 2,
+          timestamp: 'Updated 1 day ago',
+          confidence: 98,
+          sourceType: 'notion',
+          docId: 'internal-guides'
+        }
+      ]);
+      setLoading(false);
+    }, 800);
   };
 
   return (
@@ -190,7 +192,7 @@ const Search = () => {
                       pageNumber={res.pageNumber}
                       timestamp={res.timestamp}
                       confidence={res.confidence}
-                      onOpen={() => alert(`Opening document content: ${res.documentTitle}`)}
+                      onOpen={() => navigate(`/documents/${res.docId}`)}
                     />
                   ))}
                 </div>

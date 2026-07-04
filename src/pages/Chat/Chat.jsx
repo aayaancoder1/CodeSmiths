@@ -1,21 +1,30 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Button from '../../components/ui/Buttons/Button';
 import Avatar from '../../components/ui/Feedback/Avatar';
-import Card from '../../components/ui/Cards/Card';
+import Badge from '../../components/ui/Feedback/Badge';
+import { chatService } from '../../services/chatService';
 
 const Chat = () => {
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      sender: 'assistant',
-      text: 'Hello! I am your AI Enterprise Assistant. Ask me any question related to indexed drives, Notion docs, Slack messages, or GitHub logs.',
-      time: '10:00 AM'
-    }
-  ]);
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [loading, setLoading] = useState(true);
   
   const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        const history = await chatService.getHistory('session-1');
+        setMessages(history);
+      } catch (err) {
+        console.error('Error fetching chat history:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchHistory();
+  }, []);
 
   const conversationHistory = [
     { id: '1', title: 'AWS IAM configuration issues', active: true },
@@ -30,7 +39,6 @@ const Chat = () => {
     'Why did the GDrive indexing script warn?'
   ];
 
-  // Auto-scroll to bottom of messages
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -39,7 +47,7 @@ const Chat = () => {
     scrollToBottom();
   }, [messages, isTyping]);
 
-  const handleSend = (e) => {
+  const handleSend = async (e) => {
     if (e) e.preventDefault();
     if (!input.trim()) return;
 
@@ -51,20 +59,24 @@ const Chat = () => {
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    const querySent = input;
     setInput('');
     setIsTyping(true);
 
-    // Simulate AI response delay
-    setTimeout(() => {
-      setIsTyping(false);
+    try {
+      const response = await chatService.sendMessage('session-1', querySent);
       const botMessage = {
         id: Date.now() + 1,
         sender: 'assistant',
-        text: `Here is what I found regarding "${userMessage.text}". Based on Notion page "SSO Integration Guide" (page 2) and Google Drive file "security-policy-v4.pdf", you can find detailed setup checklists with 94% relevance. Would you like me to extract the steps for you?`,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        text: response.text,
+        time: response.timestamp
       };
       setMessages((prev) => [...prev, botMessage]);
-    }, 1500);
+    } catch (err) {
+      console.error('Error sending message:', err);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   const handlePromptClick = (prompt) => {
@@ -115,35 +127,39 @@ const Chat = () => {
 
         {/* Message Area */}
         <div className="flex-grow overflow-y-auto p-6 space-y-6">
-          {messages.map((msg) => {
-            const isUser = msg.sender === 'user';
-            return (
-              <div 
-                key={msg.id} 
-                className={`flex gap-3 max-w-3xl ${isUser ? 'ml-auto flex-row-reverse' : 'mr-auto'}`}
-              >
-                <Avatar 
-                  name={isUser ? 'Thanmayee' : 'AI'} 
-                  size="sm"
-                  className="shrink-0"
-                />
-                <div className="space-y-1">
-                  <div 
-                    className={`p-4 rounded-2xl text-xs leading-relaxed ${
-                      isUser 
-                        ? 'bg-brand-500 text-white rounded-tr-none shadow-md shadow-brand-500/10' 
-                        : 'bg-ui-surface border border-ui-border text-ui-text-secondary rounded-tl-none'
-                    }`}
-                  >
-                    {msg.text}
+          {loading ? (
+            <div className="text-xs text-ui-text-tertiary">Loading conversation history...</div>
+          ) : (
+            messages.map((msg) => {
+              const isUser = msg.sender === 'user';
+              return (
+                <div 
+                  key={msg.id} 
+                  className={`flex gap-3 max-w-3xl ${isUser ? 'ml-auto flex-row-reverse' : 'mr-auto'}`}
+                >
+                  <Avatar 
+                    name={isUser ? 'Thanmayee' : 'AI'} 
+                    size="sm"
+                    className="shrink-0"
+                  />
+                  <div className="space-y-1">
+                    <div 
+                      className={`p-4 rounded-2xl text-xs leading-relaxed ${
+                        isUser 
+                          ? 'bg-brand-500 text-white rounded-tr-none shadow-md shadow-brand-500/10' 
+                          : 'bg-ui-surface border border-ui-border text-ui-text-secondary rounded-tl-none'
+                      }`}
+                    >
+                      {msg.text}
+                    </div>
+                    <span className="text-[10px] text-ui-text-tertiary block px-1">
+                      {msg.time}
+                    </span>
                   </div>
-                  <span className="text-[10px] text-ui-text-tertiary block px-1">
-                    {msg.time}
-                  </span>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
 
           {isTyping && (
             <div className="flex gap-3 max-w-xl">
@@ -164,7 +180,7 @@ const Chat = () => {
         <div className="p-4 border-t border-ui-divider bg-ui-surface/20 shrink-0">
           
           {/* Suggested prompts list */}
-          {messages.length === 1 && !isTyping && (
+          {messages.length <= 1 && !isTyping && !loading && (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4 max-w-4xl mx-auto">
               {suggestedPrompts.map((p, idx) => (
                 <button
