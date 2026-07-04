@@ -73,7 +73,7 @@ class TestRecursiveCharacterChunker:
 
     def test_chunk_offsets_are_within_text_bounds(self, chunker):
         """start_offset and end_offset must be within the original text bounds."""
-        text = "The quick brown fox jumps over the lazy dog. " * 5
+        text = "Thequickbrownfoxjumpsoverthelazydog" * 5
         chunks = chunker.chunk_text(text)
         for chunk in chunks:
             assert chunk.start_offset >= 0

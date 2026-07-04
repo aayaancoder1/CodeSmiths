@@ -4,6 +4,7 @@ from app.connectors.google_drive import GoogleDriveConnector
 from app.connectors.notion import NotionConnector
 from app.connectors.slack_export import SlackExportConnector
 from app.connectors.jira_export import JiraExportConnector
+from app.connectors.file_upload import FileUploadConnector
 
 # Registry map for dynamic connector instantiation
 CONNECTOR_REGISTRY: Dict[str, Type[BaseConnector]] = {
@@ -11,6 +12,7 @@ CONNECTOR_REGISTRY: Dict[str, Type[BaseConnector]] = {
     "notion": NotionConnector,
     "slack": SlackExportConnector,
     "jira": JiraExportConnector,
+    "file_upload": FileUploadConnector,
 }
 
 
@@ -29,6 +31,7 @@ __all__ = [
     "NotionConnector",
     "SlackExportConnector",
     "JiraExportConnector",
+    "FileUploadConnector",
     "CONNECTOR_REGISTRY",
     "get_connector_class",
 ]

@@ -31,18 +31,22 @@ async def upload_document(
 ):
     """Processes manual file uploads via FastAPI multi-part form data."""
     try:
+        # Instantiate FileUploadConnector via registry to conform to connector architecture
+        from app.connectors import get_connector_class
+        conn_cls = get_connector_class("file_upload")
+        connector = conn_cls(config={})
+
         content = await file.read()
         filename = file.filename or "uploaded_file"
         file_extension = f".{filename.split('.')[-1]}" if "." in filename else ""
 
-        # Create the standardized ConnectorDocument payload
-        conn_doc = ConnectorDocument(
-            source_id=filename,
-            title=title or filename,
+        # Map details through the connector
+        conn_doc = connector.convert_to_connector_document(
+            filename=filename,
             content=content,
             mime_type=file.content_type or "application/octet-stream",
             file_extension=file_extension,
-            metadata={"storage_path": f"uploads/{filename}"}
+            title=title or filename
         )
 
         ingestion_service = IngestionService(db)

@@ -75,7 +75,7 @@ class TestPermissionEngineLevelMap:
         """Passing an unrecognised required_level must raise ValueError synchronously."""
         with pytest.raises(ValueError, match="Invalid required permission level"):
             import asyncio
-            asyncio.get_event_loop().run_until_complete(
+            asyncio.run(
                 engine.has_document_access(user_id, document_id, "superadmin", mock_db)
             )
 
@@ -90,7 +90,7 @@ class TestPermissionEngineAccess:
         user = make_user(roles=[role])
 
         # Mock DB query to return our user
-        result_mock = AsyncMock()
+        result_mock = MagicMock()
         result_mock.scalars.return_value.first.return_value = user
         mock_db.execute.return_value = result_mock
 
@@ -105,7 +105,7 @@ class TestPermissionEngineAccess:
         role.scopes = ["document:admin"]
         user = make_user(roles=[role])
 
-        result_mock = AsyncMock()
+        result_mock = MagicMock()
         result_mock.scalars.return_value.first.return_value = user
         mock_db.execute.return_value = result_mock
 
@@ -116,7 +116,7 @@ class TestPermissionEngineAccess:
         """When no ACL entries match, PermissionDeniedError must be raised."""
         user = make_user(roles=[])
 
-        result_mock = AsyncMock()
+        result_mock = MagicMock()
         result_mock.scalars.return_value.first.return_value = user
         mock_db.execute.return_value = result_mock
 
@@ -130,7 +130,7 @@ class TestPermissionEngineAccess:
         """When granted level exactly matches required level, access is granted."""
         user = make_user(roles=[])
 
-        result_mock = AsyncMock()
+        result_mock = MagicMock()
         result_mock.scalars.return_value.first.return_value = user
         mock_db.execute.return_value = result_mock
 
@@ -146,7 +146,7 @@ class TestPermissionEngineAccess:
         """An 'admin' grant must satisfy a 'read' requirement."""
         user = make_user(roles=[])
 
-        result_mock = AsyncMock()
+        result_mock = MagicMock()
         result_mock.scalars.return_value.first.return_value = user
         mock_db.execute.return_value = result_mock
 
@@ -162,7 +162,7 @@ class TestPermissionEngineAccess:
         """A 'read' grant must NOT satisfy an 'admin' requirement."""
         user = make_user(roles=[])
 
-        result_mock = AsyncMock()
+        result_mock = MagicMock()
         result_mock.scalars.return_value.first.return_value = user
         mock_db.execute.return_value = result_mock
 
@@ -179,7 +179,7 @@ class TestPermissionEngineAccess:
         group_id = uuid.uuid4()
         user = make_user(roles=[])
 
-        result_mock = AsyncMock()
+        result_mock = MagicMock()
         result_mock.scalars.return_value.first.return_value = user
         mock_db.execute.return_value = result_mock
 
@@ -196,7 +196,7 @@ class TestPermissionEngineAccess:
         group_id = uuid.uuid4()
         user = make_user(roles=[])
 
-        result_mock = AsyncMock()
+        result_mock = MagicMock()
         result_mock.scalars.return_value.first.return_value = user
         mock_db.execute.return_value = result_mock
 
@@ -214,7 +214,7 @@ class TestPermissionEngineAccess:
         """Inactive users return an empty scopes list so no RBAC bypass occurs."""
         user = make_user(is_active=False, roles=[MagicMock(scopes=["admin:all"])])
 
-        result_mock = AsyncMock()
+        result_mock = MagicMock()
         result_mock.scalars.return_value.first.return_value = user
         mock_db.execute.return_value = result_mock
 
