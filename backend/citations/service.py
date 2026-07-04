@@ -7,7 +7,7 @@ from .provenance import ProvenanceMapper
 
 class CitationService(ICitationService):
     """
-    Placeholder service implementation managing tracking workflows, builders, and validation checks.
+    Service implementation managing tracking workflows, builders, and validation checks.
     """
 
     def __init__(self, tracker: SourceTracker, builder: CitationBuilder, mapper: ProvenanceMapper):
@@ -25,9 +25,23 @@ class CitationService(ICitationService):
         return self.mapper.map_provenance(references, doc_metadata)
 
     def validate_citations(self, citations: List[Citation], answer: str) -> bool:
-        # Placeholder validation check
         for cit in citations:
             start, end = cit.text_span[0], cit.text_span[1]
             if start < 0 or end > len(answer) or start > end:
                 return False
         return True
+
+    def format_answer_with_sources(self, answer: str, citations: List[Citation]) -> str:
+        """
+        Formats the final output with sources list appended.
+        """
+        sources = []
+        for cit in citations:
+            for src in cit.sources:
+                if src.type == "document" and src.source_id not in sources:
+                    sources.append(src.source_id)
+        
+        lines = [f"Answer:\n{answer}\n\nSources:"]
+        for idx, src_id in enumerate(sources):
+            lines.append(f"[{idx+1}] {src_id}")
+        return "\n".join(lines)
