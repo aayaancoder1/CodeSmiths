@@ -1,4 +1,4 @@
-from typing import List, Dict, Any, Optional
+from typing import List, Any, Optional
 from .interface import IEmbeddingService
 from .models import DocumentEmbedding, ChunkEmbedding, EmbeddingMetadata
 from .provider import IEmbeddingProvider
@@ -8,10 +8,9 @@ from .chunk_pipeline import ChunkEmbeddingPipeline
 
 class EmbeddingService(IEmbeddingService):
     """
-    Placeholder service implementation coordinating providers, pipelines, and the vector client.
+    Coordinates providers and pipelines to generate actual embeddings.
     """
-
-    def __init__(self, provider: IEmbeddingProvider, qdrant_client: IQdrantClient):
+    def __init__(self, provider: IEmbeddingProvider, qdrant_client: Optional[IQdrantClient] = None):
         self.provider = provider
         self.qdrant_client = qdrant_client
         self.document_pipeline = DocumentEmbeddingPipeline(provider)
@@ -33,6 +32,9 @@ class EmbeddingService(IEmbeddingService):
         return self.chunk_pipeline.run(document_id, chunk_id, tenant_id, text, metadata)
 
     def store_embeddings(self, collection_name: str, embeddings: List[Any]) -> None:
+        if not self.qdrant_client:
+            raise ValueError("Qdrant client not initialized")
+        
         points = []
         for emb in embeddings:
             points.append({
@@ -52,10 +54,12 @@ class EmbeddingService(IEmbeddingService):
         self.qdrant_client.upsert_vectors(collection_name, points)
 
     def update_embeddings(self, collection_name: str, embeddings: List[Any]) -> None:
-        # For updates, upsert is structurally identical in Qdrant placeholder
         self.store_embeddings(collection_name, embeddings)
 
     def delete_embeddings(self, collection_name: str, document_id: Optional[str] = None, chunk_ids: Optional[List[str]] = None) -> None:
+        if not self.qdrant_client:
+            raise ValueError("Qdrant client not initialized")
+        
         if chunk_ids:
             self.qdrant_client.delete_vectors(collection_name, chunk_ids)
         elif document_id:
