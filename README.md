@@ -1,43 +1,257 @@
 # CodeSmiths
 
-## AI Company Brain
+# AI Company Brain
 
-An enterprise knowledge intelligence platform that transforms fragmented organizational knowledge into a searchable, explainable and actionable company memory system.
+An enterprise knowledge intelligence platform that transforms fragmented organizational data into a searchable, explainable, and actionable organizational memory system.
 
-### Problem
-Employees spend significant time searching across documents, chats, tickets and wikis. Knowledge leaves when employees leave.
+---
 
-### Our Solution
-- Multi-source document ingestion
-- Hybrid Retrieval (BM25 + Vector Search)
-- Knowledge Graph reasoning
-- Graph-augmented RAG with citations
-- Multi-agent workflow automation
-- Enterprise access control
+# Problem Statement
 
-### Core Architecture
-```
-UI -> API -> RAG Engine -> Knowledge Graph -> Agents -> Data Sources
-```
+Employees spend approximately 20% of their working hours searching for information across:
 
-### Tech Stack
-- Frontend: React + Tailwind
-- Backend: FastAPI
-- Vector DB: Qdrant
-- Graph DB: Neo4j
-- Metadata: PostgreSQL
-- Agents: LangGraph
+- Google Drive
+- Confluence
+- Notion
+- Slack
+- Teams
+- Jira
+- Internal documentation
+- Email
+- Ticketing systems
 
-### Additional Features Beyond Problem Statement
-- Knowledge gap detection
-- Organizational decision memory
-- Auto onboarding guides by role
-- Cross-team expertise discovery
-- Incident timeline reconstruction
-- Proactive organizational briefings
+Traditional enterprise search engines return documents.
 
-### Team Structure
-- Aayaan: AI/RAG + Knowledge Graph
-- Kishan: Backend + Ingestion
-- Thanmayee: Frontend
-- Nikshitha: Agents + DevOps
+We aim to build a system that returns:
+
+- Answers
+- Context
+- Relationships
+- Organizational memory
+- Actionable workflows
+
+---
+
+# Vision
+
+Build an AI-powered organizational brain capable of:
+
+- Understanding company knowledge
+- Building organizational memory
+- Reasoning across disconnected systems
+- Executing workflows
+- Preserving institutional knowledge
+
+---
+
+# Core Features
+
+## Unified Data Connectors
+
+Connect and ingest:
+
+- Google Drive
+- Notion/Wiki
+- Slack
+- Jira
+- Internal documents
+
+---
+
+## Hybrid Retrieval Engine
+
+Combination of:
+
+- BM25 lexical search
+- Dense vector search
+- Cross-encoder reranking
+
+---
+
+## Knowledge Graph
+
+Create an organizational graph containing:
+
+- Employees
+- Teams
+- Projects
+- Incidents
+- Products
+- Documents
+- Decisions
+
+---
+
+## Graph-Augmented RAG
+
+Question answering through:
+
+Question
+↓
+Hybrid Retrieval
+↓
+Knowledge Graph Expansion
+↓
+Reranking
+↓
+LLM Synthesis
+↓
+Citations
+
+---
+
+## Multi-Agent Workflows
+
+Agents capable of:
+
+- Planning
+- Tool execution
+- Ticket creation
+- Document generation
+- Incident analysis
+
+---
+
+## Enterprise Governance
+
+- ACL enforcement
+- Audit logs
+- Permission filtering
+- Multi-tenancy
+
+---
+
+# Additional Features Beyond Problem Statement
+
+## Organizational Decision Memory
+
+Track:
+
+- Why decisions were made
+- Who made them
+- When they were made
+
+---
+
+## Expertise Discovery
+
+Example:
+
+"Who knows the payment service best?"
+
+---
+
+## Knowledge Gap Detection
+
+Detect:
+
+- Missing documentation
+- Missing ownership
+- Unanswered organizational questions
+
+---
+
+## Incident Timeline Reconstruction
+
+Automatically reconstruct:
+
+- Events
+- Discussions
+- Tickets
+- Root causes
+
+---
+
+## Employee Onboarding Generator
+
+Generate personalized onboarding paths for:
+
+- Developers
+- Managers
+- Designers
+- Operations teams
+
+---
+
+## Proactive Briefings
+
+Daily summaries:
+
+- New incidents
+- Project updates
+- Knowledge changes
+
+---
+
+# Architecture
+
+Frontend
+↓
+API Gateway
+↓
+AI Services
+(RAG + KG + Agents)
+↓
+Domain Services
+↓
+Databases
+
+---
+
+# Tech Stack
+
+Frontend:
+- React
+- Tailwind
+
+Backend:
+- FastAPI
+
+Databases:
+- PostgreSQL
+- Neo4j
+- Qdrant
+
+AI:
+- LangGraph
+- LlamaIndex
+- Rerankers
+
+Infrastructure:
+- Docker
+- Redis
+
+---
+
+# Team
+
+Aayaan
+- AI/RAG
+- Knowledge Graph
+- Retrieval
+
+Kishan
+- Backend
+- Ingestion
+- Permissions
+
+Thanmayee
+- Frontend
+- Dashboard
+
+Nikshitha
+- Agents
+- DevOps
+- Testing
+
+---
+
+# Branch Workflow
+
+feature/*
+        ↓
+integration
+        ↓
+testing
+        ↓
+main
