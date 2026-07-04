@@ -1,20 +1,37 @@
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any
+from .models import RetrievalRequest, RetrievalResponse, RetrievalFilter
 
 class IRetrievalService(ABC):
     """
     Interface for the Retrieval Service.
-    Handles semantic query searches (Vector via Qdrant) and lexical searches (BM25),
-    applies ACL / permission filtering, and implements hybrid merging logic.
+    Handles semantic query searches (Vector via Qdrant) and namespace-restricted searches.
     """
 
     @abstractmethod
-    def retrieve(self, query: str, user_permissions: List[str], limit: int = 10) -> List[Dict[str, Any]]:
+    def retrieve(self, request: RetrievalRequest) -> RetrievalResponse:
         """
-        Execute hybrid search by:
-        1. Querying BM25 indices.
-        2. Querying Vector stores.
-        3. Applying ACL permission filtering.
-        4. Merging and scoring retrieval results.
+        Execute core semantic vector retrieval leveraging the complete payload schema.
+        """
+        pass
+
+    @abstractmethod
+    def similarity_search(self, query_vector: List[float], tenant_id: str, top_k: int = 10) -> RetrievalResponse:
+        """
+        Queries raw similarity space without additional filters.
+        """
+        pass
+
+    @abstractmethod
+    def filtered_search(self, query_vector: List[float], tenant_id: str, filters: List[RetrievalFilter], top_k: int = 10) -> RetrievalResponse:
+        """
+        Queries similarity space filtered by specific metadata rules.
+        """
+        pass
+
+    @abstractmethod
+    def namespace_search(self, query_vector: List[float], tenant_id: str, namespace: str, top_k: int = 10) -> RetrievalResponse:
+        """
+        Queries a specific isolated namespace or directory collection in the vector database.
         """
         pass
