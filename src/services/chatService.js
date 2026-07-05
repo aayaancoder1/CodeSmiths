@@ -1,23 +1,35 @@
 /**
  * Service for handling Chat and QA model interactions.
+ * Connects to the FastAPI GraphRAG backend via POST /api/ask.
  */
+
+const API_BASE = '/api';
+
 export const chatService = {
   /**
-   * Send a query message to the agent retrieval stream.
+   * Send a query message to the GraphRAG pipeline.
    * @param {string} sessionId
    * @param {string} query
    * @returns {Promise<any>}
    */
   async sendMessage(sessionId, query) {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          text: `Here is what I found regarding "${query}". Based on Notion page "SSO Integration Guide" (page 2) and Google Drive file "security-policy-v4.pdf", you can find detailed setup checklists with 94% relevance. Would you like me to extract the steps for you?`,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          sender: 'assistant'
-        });
-      }, 1000);
+    const response = await fetch(`${API_BASE}/ask`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query }),
     });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || `Server error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return {
+      raw: data,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      sender: 'assistant'
+    };
   },
 
   /**
@@ -32,7 +44,7 @@ export const chatService = {
           {
             id: 1,
             sender: 'assistant',
-            text: 'Hello! I am your AI Enterprise Assistant. Ask me any question related to indexed drives, Notion docs, Slack messages, or GitHub logs.',
+            text: 'Hello! I am your AI Enterprise Assistant powered by GraphRAG. Ask me any question about company incidents, services, or documents.',
             time: '10:00 AM'
           }
         ]);

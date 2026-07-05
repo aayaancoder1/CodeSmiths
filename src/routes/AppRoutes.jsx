@@ -9,11 +9,8 @@ import MainLayout from '../layouts/MainLayout/MainLayout';
 import Login from '../pages/Login/Login';
 import Dashboard from '../pages/Dashboard/Dashboard';
 import Chat from '../pages/Chat/Chat';
-import Search from '../pages/Search/Search';
 import KnowledgeGraph from '../pages/KnowledgeGraph/KnowledgeGraph';
-import Analytics from '../pages/Analytics/Analytics';
-import Admin from '../pages/Admin/Admin';
-import DocumentViewer from '../pages/DocumentViewer/DocumentViewer';
+import HowItWorks from '../pages/HowItWorks/HowItWorks';
 
 const AppRoutes = () => {
   return (
@@ -28,11 +25,8 @@ const AppRoutes = () => {
         <Route element={<MainLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/chat" element={<Chat />} />
-          <Route path="/search" element={<Search />} />
           <Route path="/knowledge-graph" element={<KnowledgeGraph />} />
-          <Route path="/analytics" element={<Analytics />} />
-          <Route path="/admin" element={<Admin />} />
-          <Route path="/documents/:documentId" element={<DocumentViewer />} />
+          <Route path="/how-it-works" element={<HowItWorks />} />
         </Route>
 
         {/* Default Redirect from Root to Login */}
@@ -46,3 +40,4 @@ const AppRoutes = () => {
 };
 
 export default AppRoutes;
+

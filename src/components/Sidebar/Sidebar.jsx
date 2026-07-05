@@ -4,11 +4,9 @@ import { NavLink } from 'react-router-dom';
 const Sidebar = ({ className = '' }) => {
   const menuItems = [
     { name: 'Dashboard', path: '/dashboard', icon: '📊' },
-    { name: 'Chat UI', path: '/chat', icon: '💬' },
-    { name: 'Search UI', path: '/search', icon: '🔍' },
+    { name: 'AI Brain Chat', path: '/chat', icon: '💬' },
     { name: 'Knowledge Graph', path: '/knowledge-graph', icon: '🕸️' },
-    { name: 'Analytics', path: '/analytics', icon: '📈' },
-    { name: 'Admin Dashboard', path: '/admin', icon: '🛡️' },
+    { name: 'How It Works', path: '/how-it-works', icon: 'ℹ️' },
   ];
 
   return (
@@ -49,3 +47,4 @@ const Sidebar = ({ className = '' }) => {
 };
 
 export default Sidebar;
+

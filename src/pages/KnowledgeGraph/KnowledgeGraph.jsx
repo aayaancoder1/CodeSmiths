@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
 import PageHeader from '../../components/ui/Layout/PageHeader';
 import Card from '../../components/ui/Cards/Card';
 import Button from '../../components/ui/Buttons/Button';
@@ -11,7 +10,6 @@ import { graphService } from '../../services/graphService';
 import { useToast } from '../../context/ToastContext';
 
 const KnowledgeGraph = () => {
-  const navigate = useNavigate();
   const { addToast } = useToast();
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
@@ -19,14 +17,18 @@ const KnowledgeGraph = () => {
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedNode, setSelectedNode] = useState(null);
+  const [selectedEdge, setSelectedEdge] = useState(null);
   const [nodeDetails, setNodeDetails] = useState(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
+  const [hoveredNode, setHoveredNode] = useState(null);
 
   // Pan and Zoom States
-  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [pan, setPan] = useState({ x: 100, y: 100 });
   const [zoom, setZoom] = useState(1);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+  const svgRef = useRef(null);
 
   useEffect(() => {
     fetchGraphData();
@@ -40,25 +42,22 @@ const KnowledgeGraph = () => {
       const data = await graphService.getTopology(searchQuery);
       setNodes(data.nodes);
       setEdges(data.edges);
-      // Reset selected node if not in results
-      if (selectedNode && !data.nodes.some((n) => n.id === selectedNode.id)) {
-        setSelectedNode(null);
-        setNodeDetails(null);
+      
+      // Auto-center or fit to screen if nodes exist
+      if (data.nodes.length > 0) {
+        setPan({ x: 150, y: 100 });
       }
     } catch (err) {
       console.error('Error loading topology:', err);
-      setError('Failed to load graph topology.');
-      addToast({
-        message: 'Graph Error',
-        description: 'Could not load knowledge graph data.',
-        variant: 'danger'
-      });
+      setError('Failed to load live database topology.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleNodeClick = async (node) => {
+  const handleNodeClick = async (node, e) => {
+    if (e) e.stopPropagation();
+    setSelectedEdge(null);
     setSelectedNode(node);
     setDetailsLoading(true);
     try {
@@ -66,38 +65,31 @@ const KnowledgeGraph = () => {
       setNodeDetails(metadata);
     } catch (err) {
       console.error('Error fetching node metadata:', err);
-      addToast({
-        message: 'Node Error',
-        description: 'Could not load node metadata.',
-        variant: 'warning'
-      });
     } finally {
       setDetailsLoading(false);
     }
   };
 
-  // Zoom controls
-  const zoomIn = () => setZoom((z) => Math.min(z + 0.1, 2));
-  const zoomOut = () => setZoom((z) => Math.max(z - 0.1, 0.5));
+  const handleEdgeClick = (edge, e) => {
+    if (e) e.stopPropagation();
+    setSelectedNode(null);
+    setNodeDetails(null);
+    setSelectedEdge(edge);
+  };
+
+  const zoomIn = () => setZoom((z) => Math.min(z + 0.15, 2.5));
+  const zoomOut = () => setZoom((z) => Math.max(z - 0.15, 0.4));
   const resetView = () => {
     setZoom(1);
-    setPan({ x: 0, y: 0 });
+    setPan({ x: 100, y: 100 });
+    setSelectedNode(null);
+    setSelectedEdge(null);
+    setNodeDetails(null);
   };
 
-  // Keyboard zoom control
-  const handleKeyDown = (e) => {
-    if (e.key === '+' || e.key === '=') zoomIn();
-    if (e.key === '-') zoomOut();
-    if (e.key === 'r' || e.key === 'R') resetView();
-    if (e.key === 'Escape') {
-      setSelectedNode(null);
-      setNodeDetails(null);
-    }
-  };
-
-  // Pan controls
   const handleMouseDown = (e) => {
-    if (e.target.tagName === 'svg' || e.target.id === 'bg-grid') {
+    // Only drag on canvas background
+    if (e.target.tagName === 'svg' || e.target.id === 'bg-grid' || e.target.id === 'canvas-group') {
       setIsDragging(true);
       setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
     }
@@ -113,320 +105,304 @@ const KnowledgeGraph = () => {
     setIsDragging(false);
   };
 
-  const getNodeColor = (type) => {
-    switch (type) {
-      case 'document': return '#5c7cff';
-      case 'service': return '#10b981';
-      case 'gateway': return '#0ea5e9';
-      case 'process': return '#f59e0b';
-      default: return '#64748b';
+  const getNodeColor = (type, isSelected) => {
+    if (isSelected) return '#f59e0b'; // Gold selected status
+
+    switch (type?.toLowerCase()) {
+      case 'service': return '#10b981'; // Green
+      case 'incident': return '#ef4444'; // Red
+      case 'document': return '#3b82f6'; // Blue
+      case 'slack thread':
+      case 'ticket': return '#8b5cf6'; // Purple
+      default: return '#6b7280';
     }
   };
 
-  const handleInspectDocument = () => {
-    if (!nodeDetails) return;
-    if (nodeDetails.type.includes('Document')) {
-      navigate('/documents/security-policy-v4');
-    } else {
-      addToast({
-        message: 'Service Node',
-        description: 'This is a service node. No document viewer is associated.',
-        variant: 'info'
-      });
-    }
+  const getStats = () => {
+    const counts = { service: 0, incident: 0, document: 0, thread: 0, other: 0 };
+    nodes.forEach(n => {
+      const type = n.type?.toLowerCase();
+      if (type === 'service') counts.service++;
+      else if (type === 'incident') counts.incident++;
+      else if (type === 'document') counts.document++;
+      else if (type === 'slack thread' || type === 'ticket') counts.thread++;
+      else counts.other++;
+    });
+    return counts;
   };
+
+  const stats = getStats();
 
   return (
-    <div className="space-y-6 w-full pb-8 select-none">
+    <div className="space-y-4 w-full pb-6 select-none relative">
       <PageHeader
-        title="Knowledge Graph"
-        subtitle="Visual representation of entity relationships, files, and ingestion logs"
+        title="Knowledge Graph Explorer"
+        subtitle="Live visualization of indexed nodes and relationships stored inside Neo4j"
       />
 
-      {error && !loading && (
-        <EmptyState
-          title="Graph Load Failed"
-          description={error}
-          action={
-            <Button variant="primary" size="sm" onClick={fetchGraphData}>
-              Retry
+      <div className="flex flex-col lg:flex-row gap-4 h-[70vh] min-h-[580px] w-full">
+        {/* Main Canvas Area (90% width or left panel) */}
+        <div className="flex-1 border border-ui-border bg-ui-bg/75 rounded-2xl relative overflow-hidden flex flex-col shadow-2xl">
+          {/* Controls HUD */}
+          <div className="absolute top-4 left-4 z-10 flex flex-wrap gap-2 items-center">
+            <SearchInput
+              value={searchQuery}
+              onChange={(val) => setSearchQuery(val)}
+              onClear={() => setSearchQuery('')}
+              placeholder="Search nodes or types..."
+              className="w-52 md:w-60 bg-ui-surface/85 backdrop-blur-md"
+            />
+            <Button variant="outline" size="sm" onClick={fetchGraphData} className="bg-ui-surface/85 backdrop-blur-md">
+              ↻ Refresh
             </Button>
-          }
-        />
-      )}
+          </div>
 
-      {!error && (
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+          <div className="absolute top-4 right-4 z-10 flex gap-1 bg-ui-surface/85 backdrop-blur-md p-1 border border-ui-border rounded-xl shadow-lg">
+            <button onClick={zoomIn} className="px-2.5 py-1 text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-all" title="Zoom In">+</button>
+            <button onClick={zoomOut} className="px-2.5 py-1 text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-all" title="Zoom Out">-</button>
+            <button onClick={resetView} className="px-2.5 py-1 text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-all">Reset</button>
+          </div>
 
-          {/* Graph Visual Canvas (3 columns wide) */}
-          <div className="lg:col-span-3 space-y-4">
-            <Card className="p-4 border border-ui-border bg-ui-surface/40 flex flex-col h-[550px] relative overflow-hidden">
-
-              {/* Control Bar */}
-              <div className="flex flex-col sm:flex-row justify-between gap-3 mb-4 z-20">
-                <div className="flex items-center gap-2">
-                  <label htmlFor="graph-filter" className="sr-only">Filter graph nodes</label>
-                  <SearchInput
-                    id="graph-filter"
-                    value={searchQuery}
-                    onChange={(val) => setSearchQuery(val)}
-                    onClear={() => setSearchQuery('')}
-                    placeholder="Filter graph nodes..."
-                    className="w-60"
-                  />
-                </div>
-
-                {/* Zoom Buttons */}
-                <div className="flex gap-2" role="group" aria-label="Zoom controls">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={zoomIn}
-                    aria-label="Zoom in"
-                    title="Zoom in (+)"
-                  >
-                    Zoom In (+)
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={zoomOut}
-                    aria-label="Zoom out"
-                    title="Zoom out (-)"
-                  >
-                    Zoom Out (-)
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={resetView}
-                    aria-label="Reset view"
-                    title="Reset view (R)"
-                  >
-                    Reset View
-                  </Button>
-                </div>
+          {/* SVG Canvas */}
+          <div
+            className="flex-grow w-full h-full cursor-grab active:cursor-grabbing outline-none"
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+          >
+            {loading ? (
+              <div className="absolute inset-0 flex items-center justify-center bg-ui-bg/60 backdrop-blur-xs z-20">
+                <Loading message="Fetching live Neo4j database graph..." />
               </div>
-
-              {/* SVG Visual Canvas Area */}
-              <div
-                className="flex-grow border border-ui-border bg-ui-bg/70 rounded-xl relative overflow-hidden cursor-grab active:cursor-grabbing"
-                onMouseDown={handleMouseDown}
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
-                onMouseLeave={handleMouseUp}
-                onKeyDown={handleKeyDown}
-                tabIndex={0}
-                role="application"
-                aria-label="Knowledge graph canvas. Use + / - to zoom, R to reset. Click nodes to inspect."
+            ) : error ? (
+              <div className="absolute inset-0 flex items-center justify-center z-20">
+                <EmptyState title="Graph Query Failed" description={error} />
+              </div>
+            ) : nodes.length === 0 ? (
+              <div className="absolute inset-0 flex items-center justify-center z-20">
+                <EmptyState title="No nodes found matching filters" description="Try querying different tags." />
+              </div>
+            ) : (
+              <svg
+                ref={svgRef}
+                className="w-full h-full"
+                onClick={() => {
+                  setSelectedNode(null);
+                  setSelectedEdge(null);
+                  setNodeDetails(null);
+                }}
               >
-                {loading ? (
-                  <div className="absolute inset-0 flex items-center justify-center bg-ui-bg/50 backdrop-blur-sm z-10">
-                    <Loading message="Rendering network connections..." />
-                  </div>
-                ) : nodes.length === 0 ? (
-                  <div className="absolute inset-0 flex items-center justify-center z-10">
-                    <EmptyState
-                      title="No Nodes Match Query"
-                      description="Try searching with other tags like 'auth', 'roles' or 'pipeline'."
-                    />
-                  </div>
-                ) : (
-                  <svg
-                    className="w-full h-full"
-                    role="img"
-                    aria-label={`Knowledge graph with ${nodes.length} nodes and ${edges.length} connections`}
+                <defs>
+                  <pattern id="graph-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#171b26" strokeWidth="0.8" />
+                  </pattern>
+                  {/* Arrow marker for relations */}
+                  <marker
+                    id="arrow"
+                    viewBox="0 0 10 10"
+                    refX="26"
+                    refY="5"
+                    markerWidth="6"
+                    markerHeight="6"
+                    orient="auto-start-reverse"
                   >
-                    {/* Grid Pattern background */}
-                    <defs>
-                      <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
-                        <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#1f2433" strokeWidth="0.5" />
-                      </pattern>
-                    </defs>
-                    <rect width="100%" height="100%" fill="url(#grid)" id="bg-grid" />
+                    <path d="M 0 1 L 10 5 L 0 9 z" fill="#334155" />
+                  </marker>
+                  <marker
+                    id="arrow-selected"
+                    viewBox="0 0 10 10"
+                    refX="26"
+                    refY="5"
+                    markerWidth="6"
+                    markerHeight="6"
+                    orient="auto-start-reverse"
+                  >
+                    <path d="M 0 1 L 10 5 L 0 9 z" fill="#f59e0b" />
+                  </marker>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#graph-grid)" id="bg-grid" />
 
-                    {/* Transformed content group (Pan & Zoom) */}
-                    <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
+                {/* Main transform group */}
+                <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`} id="canvas-group">
+                  {/* Edges layer */}
+                  {edges.map((edge, idx) => {
+                    const fromNode = nodes.find(n => n.id === edge.from);
+                    const toNode = nodes.find(n => n.id === edge.to);
+                    if (!fromNode || !toNode) return null;
 
-                      {/* Relationship Lines (Edges) */}
-                      {edges.map((edge, idx) => {
-                        const fromNode = nodes.find((n) => n.id === edge.from);
-                        const toNode = nodes.find((n) => n.id === edge.to);
-                        if (!fromNode || !toNode) return null;
+                    const isSelected = selectedEdge === edge;
+                    const isHighlighted = hoveredNode?.id === edge.from || hoveredNode?.id === edge.to;
 
-                        const midX = (fromNode.x + toNode.x) / 2;
-                        const midY = (fromNode.y + toNode.y) / 2;
+                    const midX = (fromNode.x + toNode.x) / 2;
+                    const midY = (fromNode.y + toNode.y) / 2;
 
-                        return (
-                          <g key={idx}>
-                            <line
-                              x1={fromNode.x}
-                              y1={fromNode.y}
-                              x2={toNode.x}
-                              y2={toNode.y}
-                              stroke="#1f2433"
-                              strokeWidth="2"
-                              strokeDasharray="4 4"
-                            />
-                            <text
-                              x={midX}
-                              y={midY - 5}
-                              fill="#64748b"
-                              fontSize="8"
-                              textAnchor="middle"
-                            >
-                              {edge.label}
-                            </text>
-                          </g>
-                        );
-                      })}
+                    return (
+                      <g key={idx} className="cursor-pointer" onClick={(e) => handleEdgeClick(edge, e)}>
+                        <line
+                          x1={fromNode.x}
+                          y1={fromNode.y}
+                          x2={toNode.x}
+                          y2={toNode.y}
+                          stroke={isSelected ? '#f59e0b' : isHighlighted ? '#94a3b8' : '#272d3d'}
+                          strokeWidth={isSelected ? 3.5 : isHighlighted ? 2.5 : 1.8}
+                          markerEnd={`url(#${isSelected ? 'arrow-selected' : 'arrow'})`}
+                          className="transition-all"
+                        />
+                        {/* Interactive invisible hover line for easier clicking */}
+                        <line
+                          x1={fromNode.x}
+                          y1={fromNode.y}
+                          x2={toNode.x}
+                          y2={toNode.y}
+                          stroke="transparent"
+                          strokeWidth={12}
+                        />
+                        <text
+                          x={midX}
+                          y={midY - 6}
+                          fill={isSelected ? '#f59e0b' : '#64748b'}
+                          fontSize="9"
+                          fontWeight={isSelected ? 'bold' : 'normal'}
+                          textAnchor="middle"
+                          className="font-mono bg-ui-bg select-none"
+                        >
+                          {edge.label}
+                        </text>
+                      </g>
+                    );
+                  })}
 
-                      {/* Nodes Group */}
-                      {nodes.map((node) => {
-                        const isSelected = selectedNode?.id === node.id;
-                        const nodeColor = getNodeColor(node.type);
+                  {/* Nodes layer */}
+                  {nodes.map((node) => {
+                    const isSelected = selectedNode?.id === node.id;
+                    const isHovered = hoveredNode?.id === node.id;
+                    const nodeColor = getNodeColor(node.type, isSelected);
 
-                        return (
-                          <g
-                            key={node.id}
-                            transform={`translate(${node.x}, ${node.y})`}
-                            onClick={() => handleNodeClick(node)}
-                            onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleNodeClick(node)}
-                            tabIndex={0}
-                            role="button"
-                            aria-label={`Node: ${node.label} (${node.type})`}
-                            aria-pressed={isSelected}
-                            className="cursor-pointer focus:outline-none"
-                          >
-                            {/* Highlight ring */}
-                            {isSelected && (
-                              <circle r="22" fill="none" stroke="#5c7cff" strokeWidth="2.5" className="animate-ping opacity-75" />
-                            )}
-                            <circle
-                              r="16"
-                              fill={nodeColor}
-                              stroke={isSelected ? '#f8fafc' : '#1f2433'}
-                              strokeWidth="2.5"
-                            />
-                            <text
-                              y="30"
-                              fill="#f8fafc"
-                              fontSize="11"
-                              fontWeight="bold"
-                              textAnchor="middle"
-                              className="pointer-events-none select-none drop-shadow-md"
-                            >
-                              {node.label}
-                            </text>
-                            <text
-                              y="-24"
-                              fill="#94a3b8"
-                              fontSize="8"
-                              textAnchor="middle"
-                              className="pointer-events-none select-none opacity-80"
-                            >
-                              {node.type.toUpperCase()}
-                            </text>
-                          </g>
-                        );
-                      })}
-                    </g>
-                  </svg>
-                )}
-              </div>
-
-              {/* Legend Panel */}
-              <div className="mt-3 pt-3 border-t border-ui-divider flex gap-4 flex-wrap text-xs text-ui-text-secondary" aria-label="Graph legend">
-                <span className="font-semibold text-ui-text-tertiary">LEGEND:</span>
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#5c7cff]" aria-hidden="true" /> Document Reference
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#10b981]" aria-hidden="true" /> Service Endpoint
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#0ea5e9]" aria-hidden="true" /> Gateway Router
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#f59e0b]" aria-hidden="true" /> Ingestion Process
-                </span>
-              </div>
-            </Card>
+                    return (
+                      <g
+                        key={node.id}
+                        transform={`translate(${node.x}, ${node.y})`}
+                        onClick={(e) => handleNodeClick(node, e)}
+                        onMouseEnter={() => setHoveredNode(node)}
+                        onMouseLeave={() => setHoveredNode(null)}
+                        className="cursor-pointer select-none"
+                      >
+                        {/* Pulse effect */}
+                        {isSelected && (
+                          <circle r="22" fill="none" stroke="#f59e0b" strokeWidth="2" className="animate-ping opacity-60" />
+                        )}
+                        <circle
+                          r={isHovered ? 18 : 15}
+                          fill={nodeColor}
+                          stroke={isSelected ? '#ffffff' : '#090a0f'}
+                          strokeWidth="2"
+                          className="transition-all shadow-lg"
+                        />
+                        <text
+                          y="32"
+                          fill={isSelected ? '#f59e0b' : '#ffffff'}
+                          fontSize="10"
+                          fontWeight="bold"
+                          textAnchor="middle"
+                          className="drop-shadow-md"
+                        >
+                          {node.label}
+                        </text>
+                        <text
+                          y="-22"
+                          fill="#64748b"
+                          fontSize="8"
+                          fontWeight="bold"
+                          textAnchor="middle"
+                          className="uppercase tracking-wider opacity-85"
+                        >
+                          {node.type}
+                        </text>
+                      </g>
+                    );
+                  })}
+                </g>
+              </svg>
+            )}
           </div>
 
-          {/* Node Details Panel (1 column wide) */}
-          <div className="space-y-4">
-            <Card
-              className="p-5 border border-ui-border bg-ui-surface/40 h-[550px] flex flex-col justify-between"
-              role="complementary"
-              aria-label="Node inspector"
-            >
-              <div>
-                <h2 className="text-xs font-semibold text-ui-text-secondary uppercase tracking-wider mb-4">
-                  Node Inspector
-                </h2>
-
-                {detailsLoading ? (
-                  <div className="py-12">
-                    <Loading message="Loading metadata..." />
-                  </div>
-                ) : nodeDetails ? (
-                  <div className="space-y-4">
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-semibold uppercase text-ui-text-tertiary tracking-wider block">
-                        Entity Type
-                      </span>
-                      <Badge variant="brand" size="sm">{nodeDetails.type}</Badge>
-                    </div>
-
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-semibold uppercase text-ui-text-tertiary tracking-wider block">
-                        Title / Name
-                      </span>
-                      <h3 className="text-sm font-bold text-white leading-snug">{nodeDetails.title}</h3>
-                    </div>
-
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-semibold uppercase text-ui-text-tertiary tracking-wider block">
-                        Description Details
-                      </span>
-                      <p className="text-xs text-ui-text-secondary leading-relaxed bg-ui-bg/50 p-3 rounded-lg border border-ui-border">
-                        {nodeDetails.details}
-                      </p>
-                    </div>
-
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-semibold uppercase text-ui-text-tertiary tracking-wider block">
-                        Last Synced Status
-                      </span>
-                      <span className="text-xs text-ui-text-secondary">
-                        <time>⌛ {nodeDetails.lastModified}</time>
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-20 text-xs text-ui-text-tertiary" aria-live="polite">
-                    Click a topology node to inspect its document context and sync metadata.
-                  </div>
-                )}
+          {/* Stats HUD (Bottom Left) */}
+          <div className="absolute bottom-4 left-4 z-10 bg-ui-surface/85 backdrop-blur-md p-3.5 border border-ui-border rounded-2xl shadow-xl space-y-2 text-[10px] text-ui-text-secondary w-48 pointer-events-none">
+            <h4 className="font-extrabold text-white uppercase tracking-wider text-[9px] border-b border-ui-divider pb-1">Graph Statistics</h4>
+            <div className="grid grid-cols-2 gap-1.5 font-bold">
+              <div>Nodes: <span className="text-white">{nodes.length}</span></div>
+              <div>Edges: <span className="text-white">{edges.length}</span></div>
+              <div className="col-span-2 pt-1 border-t border-ui-divider grid grid-cols-2 gap-1">
+                <span className="text-emerald-400">🟢 Services: {stats.service}</span>
+                <span className="text-red-400">🔴 Incidents: {stats.incident}</span>
+                <span className="text-blue-400">🔵 Documents: {stats.document}</span>
+                <span className="text-purple-400">🟣 Chat Logs: {stats.thread}</span>
               </div>
-
-              {nodeDetails && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleInspectDocument}
-                  className="w-full mt-4"
-                  aria-label="Open related document in document viewer"
-                >
-                  Inspect Documentation
-                </Button>
-              )}
-            </Card>
+            </div>
           </div>
 
+          {/* Legend HUD (Bottom Right) */}
+          <div className="absolute bottom-4 right-4 z-10 bg-ui-surface/85 backdrop-blur-md p-3 border border-ui-border rounded-xl shadow-xl text-[10px] text-ui-text-secondary flex gap-3 flex-wrap">
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#10b981]" /> Service</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#ef4444]" /> Incident</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#3b82f6]" /> Document</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#8b5cf6]" /> Chat/Thread</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#f59e0b]" /> Selected</span>
+          </div>
         </div>
-      )}
+
+        {/* HUD inspector panel (Right 300px side panel) */}
+        <div className="w-full lg:w-72 bg-ui-surface/40 border border-ui-border rounded-2xl p-5 flex flex-col justify-between shadow-2xl backdrop-blur-md">
+          <div className="space-y-4">
+            <h3 className="text-xs font-bold text-white uppercase tracking-wider border-b border-ui-divider pb-2 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-brand-500" /> HUD Inspector
+            </h3>
+
+            {selectedNode && (
+              <div className="space-y-4 text-xs animate-fade-in">
+                <div>
+                  <span className="text-[9px] uppercase font-bold text-ui-text-tertiary tracking-widest block mb-1">Node Type</span>
+                  <Badge variant="brand" size="sm">{selectedNode.type?.toUpperCase()}</Badge>
+                </div>
+                <div>
+                  <span className="text-[9px] uppercase font-bold text-ui-text-tertiary tracking-widest block mb-1">Entity ID</span>
+                  <h4 className="font-extrabold text-white leading-tight break-all">{selectedNode.id}</h4>
+                </div>
+                {detailsLoading ? (
+                  <div className="py-4"><Loading message="Loading database context..." /></div>
+                ) : nodeDetails ? (
+                  <div>
+                    <span className="text-[9px] uppercase font-bold text-ui-text-tertiary tracking-widest block mb-1">Database Properties</span>
+                    <pre className="p-3 bg-ui-bg/70 border border-ui-border rounded-xl font-mono text-[10px] text-ui-text-secondary leading-normal whitespace-pre-wrap max-h-56 overflow-y-auto">
+                      {nodeDetails.details}
+                    </pre>
+                  </div>
+                ) : null}
+              </div>
+            )}
+
+            {selectedEdge && (
+              <div className="space-y-4 text-xs animate-fade-in">
+                <div>
+                  <span className="text-[9px] uppercase font-bold text-ui-text-tertiary tracking-widest block mb-1">Relationship Type</span>
+                  <Badge variant="warning" size="sm">{selectedEdge.label}</Badge>
+                </div>
+                <div className="space-y-2 bg-ui-bg/70 p-3 rounded-xl border border-ui-border font-mono text-[10px] text-ui-text-secondary">
+                  <div>Source Node: <br /><strong className="text-white">{selectedEdge.from}</strong></div>
+                  <div className="pt-2 border-t border-ui-divider">Target Node: <br /><strong className="text-white">{selectedEdge.to}</strong></div>
+                </div>
+              </div>
+            )}
+
+            {!selectedNode && !selectedEdge && (
+              <div className="text-center py-24 text-xs text-ui-text-tertiary leading-relaxed">
+                🔍 Click on any entity node or directed edge in the viewport to inspect its properties.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

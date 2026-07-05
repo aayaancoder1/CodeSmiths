@@ -1,6 +1,7 @@
 import logging
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from app.config.config import settings
 from app.core.exceptions import (
     BrainException,
@@ -18,6 +19,7 @@ from app.api.connectors import router as connectors_router
 from app.api.permissions import router as permissions_router
 from app.api.audit import router as audit_router
 from app.api.jobs import router as jobs_router
+from app.api.ask import router as ask_router
 from app.middleware.tenant import RequestContextMiddleware
 
 # Configure basic logging formatting suited for enterprise debugging
@@ -34,6 +36,15 @@ app = FastAPI(
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
+)
+
+# Add CORS middleware for frontend dev server
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Add request context middleware
@@ -104,3 +115,4 @@ app.include_router(connectors_router)
 app.include_router(permissions_router)
 app.include_router(audit_router)
 app.include_router(jobs_router)
+app.include_router(ask_router)
