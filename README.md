@@ -360,7 +360,7 @@ Advantages:
 
 ## Knowledge Graph
 
-![Knowledge Graph](assets/Knowledge Graph.png)
+![Knowledge Graph](assets/Knowledge-Graph.png)
 
 ---
 
